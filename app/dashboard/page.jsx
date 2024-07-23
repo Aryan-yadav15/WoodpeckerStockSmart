@@ -13,6 +13,7 @@ import { useUser } from '@clerk/nextjs';
 import { eq } from 'drizzle-orm';
 import Home from './_components/try';
 import { generateInventoryPrediction } from '@/utils/geminiai';
+import { scrapeAmazonProduct } from '@/utils/scraper';
 
 const Dashboard = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -22,6 +23,8 @@ const Dashboard = () => {
   const [inventoryData, setInventoryData] = useState(null); // State to hold inventory data as an object
   const [refreshKey, setRefreshKey] = useState(0);
 
+
+  
 
   useEffect(() => {
     if (email) {
@@ -89,19 +92,23 @@ const Dashboard = () => {
     setIsModalOpen(false);
   };
 
+
   const handleAddProduct = async (formData) => {
     try {
-      console.log(inventoryId)
+      console.log(inventoryId);
+  
       // Ensure inventoryId is set before proceeding
       if (!inventoryId) {
         throw new Error('Inventory ID is not set.');
       }
-      let invenId = inventoryId
-
+  
+      let invenId = inventoryId;
+  
       // Example logic to add product to inventory
       const productId = uuidv4();
-
-      const addedProduct = await db.insert(Product)
+  
+      // Insert the product
+      const [result] = await db.insert(Product)
         .values({
           id: productId,
           name: formData.get('productName'), // Retrieve product name from formData
@@ -109,18 +116,47 @@ const Dashboard = () => {
           lastSoldPrice: formData.get('lastSoldPrice'), // Retrieve lastSoldPrice from formData
           lastMonthStock: formData.get('soldLastMonth'), // Retrieve soldLastMonth from formData
           inventoryId: invenId, // Assigning the current inventory ID
-          Desc: formData.get('otherDetails'), // Retrieve otherDetails from formData
+          desc: formData.get('otherDetails'), // Retrieve otherDetails from formData
           quantity: formData.get('quantity'),
           understock: formData.get('understock') === 'true', // Convert understock to boolean
-          overstock: formData.get('overstock') === 'true' // Convert overstock to boolean
+          overstock: formData.get('overstock') === 'true', // Convert overstock to boolean
+          url: formData.get('url') // Save the URL for fetching the rating later
         })
-        .returning({ productId: Product.id }); // Return the inserted product record
-
-        scrapeAmazonProduct()
-      console.log('Product added:', addedProduct);
+        .returning(Product.id);
+  
+      // Extract productId from result
+      const insertedProductId = result[0]?.id;
+  
+      // Set the productId state
+      if (insertedProductId) {
+        setProductId(insertedProductId);
+      }
+  
+      console.log('Product added successfully:', insertedProductId);
+  
+      // Close the modal
       handleCloseModal();
     } catch (error) {
       console.error('Error adding product:', error);
+    }
+  };
+  
+
+  const fetchRating = async (productId) => {
+    try {
+      const product = await db.select().from(Product).where(eq(Product.id, productId));
+
+      if (!product || !product.url) {
+        throw new Error('Product URL not found.');
+      }
+
+      const rating = await scrapeAmazonProduct(product.url);
+      console.log('Fetched rating:', rating);
+
+      return rating;
+    } catch (error) {
+      console.error('Error fetching rating:', error);
+      throw error; // Rethrow the error for handling in the caller function
     }
   };
 
@@ -205,27 +241,27 @@ const Dashboard = () => {
     const total = products.length;
     const overstocked = products.filter(p => p.overstock === true).length;
     const understocked = products.filter(p => p.understock === true).length;
-  
+
     const overstockedPercentage = total > 0 ? (overstocked / total) * 100 : 0;
     const understockedPercentage = total > 0 ? (understocked / total) * 100 : 0;
-  
+
     const totalCostLastMonth = products.reduce((acc, product) => {
       return acc + (parseFloat(product.lastSoldPrice || 0) * parseInt(product.lastMonthStock || 0));
     }, 0);
-  
+
     const totalRevenueThisMonth = products.reduce((acc, product) => {
       return acc + (parseFloat(product.price || 0) * parseInt(product.quantity || 0));
     }, 0);
-  
+
     const totalCostThisMonth = products.reduce((acc, product) => {
       return acc + (parseFloat(product.lastSoldPrice || 0) * parseInt(product.quantity || 0));
     }, 0);
-  
+
     const totalProfit = totalRevenueThisMonth - totalCostThisMonth;
-  
+
     const totalProfitPercentage = totalRevenueThisMonth > 0 ? (totalProfit / totalRevenueThisMonth) * 100 : 0;
     const spentChangePercentage = totalCostLastMonth > 0 ? ((totalCostThisMonth - totalCostLastMonth) / totalCostLastMonth) * 100 : 0;
-  
+
     setPercentages({
       overstockedPercentage: overstockedPercentage.toFixed(2),
       understockedPercentage: understockedPercentage.toFixed(2),
@@ -235,13 +271,13 @@ const Dashboard = () => {
       totalSpentThisMonth: totalCostThisMonth.toFixed(2),
       totalSpentLastMonth: totalCostLastMonth.toFixed(2),
     });
-  
+
     console.log('Total profit is ' + totalProfit);
     console.log(`Total Products: ${total}`);
     console.log(`Overstocked Products: ${overstocked} (${overstockedPercentage.toFixed(2)}%)`);
     console.log(`Understocked Products: ${understocked} (${understockedPercentage.toFixed(2)}%)`);
   };
-  
+
 
 
 

@@ -5,10 +5,11 @@ const AddProductModal = ({ isOpen, onClose, inventoryId, onAddProduct }) => {
   const [price, setPrice] = useState('');
   const [lastPrice, setLastPrice] = useState('');
   const [soldLastMonth, setSoldLastMonth] = useState('');
-  const [ quantity, setQuantity]=useState('');
+  const [quantity, setQuantity] = useState('');
   const [image, setImage] = useState(null);
   const [otherDetails, setOtherDetails] = useState('');
   const [stockStatus, setStockStatus] = useState('perfect');
+  const [url, setUrl] = useState('');
 
   const handleImageUpload = (e) => {
     setImage(e.target.files[0]);
@@ -33,7 +34,7 @@ const AddProductModal = ({ isOpen, onClose, inventoryId, onAddProduct }) => {
     // Convert stock status to boolean values
     formData.append('understock', stockStatus === 'under');
     formData.append('overstock', stockStatus === 'over');
-
+    formData.append('url', url)
     onAddProduct(formData);
   };
 
@@ -127,7 +128,6 @@ const AddProductModal = ({ isOpen, onClose, inventoryId, onAddProduct }) => {
               </label>
               <input
                 id="quantity"
-                type="number"
                 placeholder="quantity"
                 value={quantity}
                 onChange={(e) => setQuantity(e.target.value)}
@@ -136,17 +136,32 @@ const AddProductModal = ({ isOpen, onClose, inventoryId, onAddProduct }) => {
               />
             </div>
           </div>
-          <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="otherDetails">
-              Other Details
-            </label>
-            <textarea
-              id="otherDetails"
-              placeholder="Other important details"
-              value={otherDetails}
-              onChange={(e) => setOtherDetails(e.target.value)}
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-            ></textarea>
+          <div className="flex flex-row gap-10">
+            <div className="mb-4 flex-1">
+              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="otherDetails">
+                Other Details
+              </label>
+              <textarea
+                id="otherDetails"
+                placeholder="Other important details"
+                value={otherDetails}
+                onChange={(e) => setOtherDetails(e.target.value)}
+                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              ></textarea>
+            </div>
+
+            <div className="mb-4 flex-1">
+              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="price">
+                Product URL
+              </label>
+              <textarea
+                id="url"
+                placeholder="URL"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              ></textarea>
+            </div>
           </div>
           <div className="flex items-center justify-between">
             <button

@@ -38,15 +38,15 @@ export async function generateInventoryPrediction(productList, budget) {
 
         if (result.response && result.response.candidates && result.response.candidates.length > 0) {
             let text = result.response.candidates[0].content.parts[0].text;
-            console.log('Original Text:', text);  // Log for debugging
+            // console.log('Original Text:', text);  // Log for debugging
 
             // Clean the text
             text = text.replace(/```json/g, '').replace(/```/g, '').trim();
-            console.log('Cleaned Text:', text);  // Log cleaned text
+            // console.log('Cleaned Text:', text);  // Log cleaned text
 
             // Add commas between question and answer if missing
             text = text.replace(/(\d})\s*("answer")/g, '$1,$2');  // Add commas before "answer" if missing
-            console.log('Corrected Text:', text);  // Log corrected text
+            // console.log('Corrected Text:', text);  // Log corrected text
 
             // Parse the cleaned JSON
             const parsedResult = JSON.parse(text);
@@ -67,8 +67,8 @@ function generatePrompt(productList, budget) {
     const inputData = {
       products: productList.map(product => ({
         name: product.name,
-        buyingPrice: parseFloat(product.buyingPrice),
-        soldLastMonth: parseInt(product.soldLastMonth, 10),
+        buyingPrice: parseFloat(product.price),
+        soldLastMonth: parseInt(product.lastSoldPrice, 10),
         profit: parseFloat(product.profit)
       })),
       budget: parseFloat(budget)
@@ -87,6 +87,7 @@ function generatePrompt(productList, budget) {
   4. Adjust weights if the difference between max and min quantities exceeds 30%.
   5. Repeat steps 3-4 until budget is exhausted or balance is achieved.
   6. Fine-tune the final distribution to ensure the total cost is as close as possible to the budget without exceeding it.
+  7. Be very sure the total shouldnt exceed the budget
 
   
   Return the result as a JSON object with the following structure:

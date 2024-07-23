@@ -5,6 +5,7 @@ const AddProductModal = ({ isOpen, onClose, inventoryId, onAddProduct }) => {
   const [price, setPrice] = useState('');
   const [lastPrice, setLastPrice] = useState('');
   const [soldLastMonth, setSoldLastMonth] = useState('');
+  const [ quantity, setQuantity]=useState('');
   const [image, setImage] = useState(null);
   const [otherDetails, setOtherDetails] = useState('');
   const [stockStatus, setStockStatus] = useState('perfect');
@@ -27,7 +28,7 @@ const AddProductModal = ({ isOpen, onClose, inventoryId, onAddProduct }) => {
     formData.append('image', image);
     formData.append('otherDetails', otherDetails);
     formData.append('inventoryId', inventoryId);
-    formData.append('quantity', 20);
+    formData.append('quantity', quantity);
 
     // Convert stock status to boolean values
     formData.append('understock', stockStatus === 'under');
@@ -121,24 +122,18 @@ const AddProductModal = ({ isOpen, onClose, inventoryId, onAddProduct }) => {
               </select>
             </div>
             <div className="mb-4 flex-1">
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="image">
-                Product Image
+              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="price">
+                Current Quatity
               </label>
-              <div className="flex items-center">
-                <label
-                  htmlFor="image"
-                  className="cursor-pointer inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                >
-                  Choose File
-                </label>
-                <input
-                  id="image"
-                  type="file"
-                  onChange={handleImageUpload}
-                  className="hidden"
-                  required
-                />
-              </div>
+              <input
+                id="quantity"
+                type="number"
+                placeholder="quantity"
+                value={quantity}
+                onChange={(e) => setQuantity(e.target.value)}
+                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                required
+              />
             </div>
           </div>
           <div className="mb-4">

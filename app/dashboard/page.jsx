@@ -20,6 +20,8 @@ const Dashboard = () => {
   const { user } = useUser();
   const email = user?.primaryEmailAddress?.emailAddress;
   const [inventoryData, setInventoryData] = useState(null); // State to hold inventory data as an object
+  const [refreshKey, setRefreshKey] = useState(0);
+
 
   useEffect(() => {
     if (email) {
@@ -105,10 +107,10 @@ const Dashboard = () => {
           name: formData.get('productName'), // Retrieve product name from formData
           price: formData.get('price'), // Retrieve price from formData
           lastSoldPrice: formData.get('lastSoldPrice'), // Retrieve lastSoldPrice from formData
-          LastMonthStock: formData.get('soldLastMonth'), // Retrieve soldLastMonth from formData
+          lastMonthStock: formData.get('soldLastMonth'), // Retrieve soldLastMonth from formData
           inventoryId: invenId, // Assigning the current inventory ID
           Desc: formData.get('otherDetails'), // Retrieve otherDetails from formData
-          quantity: 20,
+          quantity: formData.get('quantity'),
           understock: formData.get('understock') === 'true', // Convert understock to boolean
           overstock: formData.get('overstock') === 'true' // Convert overstock to boolean
         })
@@ -127,11 +129,28 @@ const Dashboard = () => {
   const [predictionResult, setPredictionResult] = useState(null);
   const [isPredicting, setIsPredicting] = useState(false);
 
+  const [percentages, setPercentages] = useState({
+    overstockedPercentage: 0,
+    understockedPercentage: 0,
+    totalProfit: 0,
+    totalProfitPercentage: 0,
+    spentChangePercentage: 0,
+    totalSpentThisMonth: 0,
+    totalSpentLastMonth: 0,
+  });
+
+
+
+
   const handlePredictInventory = async () => {
     setIsPredicting(true);
     try {
       // Fetch products for the current inventory
       const products = await db.select().from(Product).where(eq(Product.inventoryId, inventoryId));
+      if (products) {
+        console.log('daijosdaiosjdaois');
+        calculateInventoryPercentages(products);
+      }
 
       // Format products for the prediction function
       const formattedProducts = products.map(product => ({
@@ -148,21 +167,32 @@ const Dashboard = () => {
 
       // Generate prediction
       const result = await generateInventoryPrediction(formattedProducts, budget);
-      console.log('Prediction Result:', result);  // Ensure this logs the result
+      // Ensure the result is logged
+      console.log('Prediction Result:', result);
       setPredictionResult(result);
 
       // Update suggested stock in the database
       if (result && result.optimalStock) {
-        const updatePromises = result.optimalStock.map(item => {
+        for (let item of result.optimalStock) {
           console.log(item);  // Log item to ensure data is correct
-          return db.update(Product)
-            .set({ suggestedStock: item.optimalQuantity.toString() })
-            .where(eq(Product.name, item.product))
-            .where(eq(Product.inventoryId, inventoryId));  // Use multiple `.where` calls if needed
-        });
 
-        await Promise.all(updatePromises);
+          // Fetch the specific product
+          const [productToUpdate] = await db.select().from(Product)
+            .where(eq(Product.name, item.product))
+            .where(eq(Product.inventoryId, inventoryId));
+
+          // Update the suggested stock
+          if (productToUpdate) {
+            await db.update(Product)
+              .set({ suggestedStock: item.optimalQuantity.toString() })
+              .where(eq(Product.id, productToUpdate.id));
+          }
+        }
+        console.log('Database updated successfully');
       }
+
+      // Trigger re-render by updating refreshKey
+      setRefreshKey(prevKey => prevKey + 1);
     } catch (error) {
       console.error("Error predicting inventory:", error);
     } finally {
@@ -171,11 +201,56 @@ const Dashboard = () => {
   };
 
 
+  const calculateInventoryPercentages = (products) => {
+    const total = products.length;
+    const overstocked = products.filter(p => p.overstock === true).length;
+    const understocked = products.filter(p => p.understock === true).length;
+  
+    const overstockedPercentage = total > 0 ? (overstocked / total) * 100 : 0;
+    const understockedPercentage = total > 0 ? (understocked / total) * 100 : 0;
+  
+    const totalCostLastMonth = products.reduce((acc, product) => {
+      return acc + (parseFloat(product.lastSoldPrice || 0) * parseInt(product.lastMonthStock || 0));
+    }, 0);
+  
+    const totalRevenueThisMonth = products.reduce((acc, product) => {
+      return acc + (parseFloat(product.price || 0) * parseInt(product.quantity || 0));
+    }, 0);
+  
+    const totalCostThisMonth = products.reduce((acc, product) => {
+      return acc + (parseFloat(product.lastSoldPrice || 0) * parseInt(product.quantity || 0));
+    }, 0);
+  
+    const totalProfit = totalRevenueThisMonth - totalCostThisMonth;
+  
+    const totalProfitPercentage = totalRevenueThisMonth > 0 ? (totalProfit / totalRevenueThisMonth) * 100 : 0;
+    const spentChangePercentage = totalCostLastMonth > 0 ? ((totalCostThisMonth - totalCostLastMonth) / totalCostLastMonth) * 100 : 0;
+  
+    setPercentages({
+      overstockedPercentage: overstockedPercentage.toFixed(2),
+      understockedPercentage: understockedPercentage.toFixed(2),
+      totalProfit: totalProfit.toFixed(2),
+      totalProfitPercentage: totalProfitPercentage.toFixed(2),
+      spentChangePercentage: spentChangePercentage.toFixed(2),
+      totalSpentThisMonth: totalCostThisMonth.toFixed(2),
+      totalSpentLastMonth: totalCostLastMonth.toFixed(2),
+    });
+  
+    console.log('Total profit is ' + totalProfit);
+    console.log(`Total Products: ${total}`);
+    console.log(`Overstocked Products: ${overstocked} (${overstockedPercentage.toFixed(2)}%)`);
+    console.log(`Understocked Products: ${understocked} (${understockedPercentage.toFixed(2)}%)`);
+  };
+  
+
+
 
   return (
     <div className='flex flex-col justify-between h-screen'>
       <div>
-        <Header />
+        <Header
+          invetoryId={inventoryId}
+        />
         <div className="flex flex-col bg-slate-50 bg-gradient-to-l from-green-500/10 via-red-500/5 to-red-500/10">
           <div className="pl-40 pt-5 flex flex-row gap-5">
             <h1 className='text-4xl text-black font-bold'>Overview</h1>
@@ -187,12 +262,23 @@ const Dashboard = () => {
             </div>
           </div>
           <section className="flex-1 w-screen flex items-center justify-center py-4">
-            <CreditCard
-              cardNumber="1234 5678 9012 3456"
-              cardHolder="John Doe"
-              expiryDate="12/23"
-              bankName="Bank of React"
-            />
+            {inventoryData ? (
+              <CreditCard
+                budget={inventoryData.budget}
+                cardNumber="1234 5678 9012 3456"
+                cardHolder="John Doe"
+                expiryDate="12/23"
+                bankName="Bank of React"
+              />
+            ) : (
+              <CreditCard
+                budget='0'
+                cardNumber="1234 5678 9012 3456"
+                cardHolder="John Doe"
+                expiryDate="12/23"
+                bankName="Bank of React"
+              />
+            )}
           </section>
           <section className="flex-1 flex flex-row justify-evenly px-20 py-5 border-t">
             <div>
@@ -200,10 +286,10 @@ const Dashboard = () => {
                 <h1 className='font-semibold text-sm'>Profit</h1>
                 <div className="flex flex-row gap-1 justify-center items-center">
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-indian-rupee"><path d="M6 3h12" /><path d="M6 8h12" /><path d="m6 13 8.5 8" /><path d="M6 13h3" /><path d="M9 13c6.667 0 6.667-10 0-10" /></svg>
-                  <h1 className='text-xl font-bold'>1,200</h1>
+                  <h1 className='text-xl font-bold'>{percentages.totalProfit}</h1>
                   <p className='mb-3 text-green-500 font-semibold text-sm flex flex-row justify-center items-center'>
                     <svg xmlns="http://www.w3.org/2000/svg" width="12" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-move-up"><path d="M8 6L12 2L16 6" /><path d="M12 2V22" /></svg>
-                    20%
+                    {percentages.totalProfitPercentage}
                   </p>
                 </div>
                 <p className='text-sm text-slate-400'>Compared to last month</p>
@@ -211,27 +297,30 @@ const Dashboard = () => {
             </div>
             <div>
               <div className="flex flex-col justify-start">
-                <h1 className='font-medium text-sm'>Expenses</h1>
+                <h1 className='font-medium text-sm'>
+                  {percentages.understockedPercentage > percentages.overstockedPercentage ? 'Understock' : 'Overstock'}
+                </h1>
                 <div className="flex flex-row gap-1 justify-center items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-indian-rupee"><path d="M6 3h12" /><path d="M6 8h12" /><path d="m6 13 8.5 8" /><path d="M6 13h3" /><path d="M9 13c6.667 0 6.667-10 0-10" /></svg>
-                  <h1 className='text-xl font-bold'>1,200</h1>
-                  <p className='mb-3 text-green-500 font-semibold text-sm flex flex-row justify-center items-center'>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-move-up"><path d="M8 6L12 2L16 6" /><path d="M12 2V22" /></svg>
-                    20%
-                  </p>
+                  <h1 className='text-xl font-bold'>
+                    {percentages.understockedPercentage > percentages.overstockedPercentage
+                      ? percentages.understockedPercentage
+                      : percentages.overstockedPercentage
+                    }
+                    %
+                  </h1>
                 </div>
-                <p className='text-sm text-slate-400'>Compared to last month</p>
+                <p className='text-sm text-slate-400'>Of inventory </p>
               </div>
             </div>
             <div>
               <div className="flex flex-col justify-start">
-                <h1 className='font-medium text-sm'>Sales</h1>
+                <h1 className='font-medium text-sm'>Expenditure</h1>
                 <div className="flex flex-row gap-1 justify-center items-center">
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-indian-rupee"><path d="M6 3h12" /><path d="M6 8h12" /><path d="m6 13 8.5 8" /><path d="M6 13h3" /><path d="M9 13c6.667 0 6.667-10 0-10" /></svg>
-                  <h1 className='text-xl font-bold'>1,200</h1>
+                  <h1 className='text-xl font-bold'>{percentages.totalSpentThisMonth}</h1>
                   <p className='mb-3 text-green-500 font-semibold text-sm flex flex-row justify-center items-center'>
                     <svg xmlns="http://www.w3.org/2000/svg" width="12" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-move-up"><path d="M8 6L12 2L16 6" /><path d="M12 2V22" /></svg>
-                    20%
+                    {percentages.spentChangePercentage}
                   </p>
                 </div>
                 <p className='text-sm text-slate-400'>Compared to last month</p>
@@ -250,13 +339,13 @@ const Dashboard = () => {
               </button>
             </div>
             <List
+              key={refreshKey}
               inventoryId={inventoryId}
             />
-
           </section>
         </div>
       </div>
-      
+
       <Footer />
       <AddProductModal
         isOpen={isModalOpen}

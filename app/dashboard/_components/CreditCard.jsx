@@ -1,7 +1,7 @@
 // src/CreditCard.js
 import React from 'react';
 
-const CreditCard = ({ cardNumber, cardHolder, expiryDate, bankName }) => {
+const CreditCard = ({ cardNumber, cardHolder, expiryDate, bankName,budget }) => {
   return (
     <div className="w-[350px] bg-gradient-to-r from-gray-900 to-gray-600 rounded-xl text-white p-5 shadow-lg">
       <div className="flex justify-between items-center mb-4">
@@ -14,7 +14,7 @@ const CreditCard = ({ cardNumber, cardHolder, expiryDate, bankName }) => {
       </div>
       <div className="mb-4">
         <span className="text-xs">Budget</span>
-        <div className="text-3xl font-semibold">12,230</div>
+        <div className="text-3xl font-semibold">{budget}</div>
       </div>
       <div className="flex justify-between items-center">
         <div>

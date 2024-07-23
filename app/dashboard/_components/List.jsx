@@ -50,12 +50,12 @@ const List = ({ inventoryId }) => {
   };
 
   const getProfitColor = (profit) => {
-    return profit >= 0 ? 'text-green-400 font-semibold' : 'text-red-500 font-semibold'; // Tailwind CSS classes
+    return profit >= 0 ? 'text-green-600 font-semibold' : 'text-red-500 font-semibold'; // Tailwind CSS classes
   };
 
   return (
     <div className='mt-10'>
-      <div className="bg-gray-800 flex flex-row justify-between px-2 rounded-lg w-full">
+      <div className="bg-gray-800 flex flex-row justify-between px-2 rounded-lg w-full ">
         <h2 className="text-white text-md p-2">Name</h2>
         <h2 className="text-white text-md p-2">Price</h2>
         <h2 className="text-white text-md p-2">Quantity</h2>
@@ -72,18 +72,20 @@ const List = ({ inventoryId }) => {
 
           return (
             <li key={product.id} className='flex flex-row justify-between items-center p-2 bg-slate-100 mt-3 rounded-lg shadow-lg'>
-              <p className='flex-1'>{product.name}</p>
-              <p className='flex-1'>{product.price}</p>
-              <p className='flex-1'>{product.quantity}</p>
-                <p className='flex-1'>{product.suggestedStock}</p>
-              <p className={`px-2 flex-1  rounded ${getStatusColor(product)}`}>
-                {product.overstock
-                  ? 'Overstocked'
-                  : product.understock
-                    ? 'Understocked'
-                    : 'Perfect'}
-              </p>
-              <p className={getProfitColor(profitPerUnit) }>
+              <p className='flex-1 text-center'>{product.name}</p>
+              <p className='flex-1 text-center'>{product.price}</p>
+              <p className='flex-1 text-center'>{product.quantity}</p>
+              <p className='flex-1 text-center'>{product.suggestedStock}</p>
+              <div className="flex-1 flex justify-center items-center">
+                <p className={`px-2 w-full rounded ${getStatusColor(product)} text-center`}>
+                  {product.overstock
+                    ? 'Overstocked'
+                    : product.understock
+                      ? 'Understocked'
+                      : 'Perfect'}
+                </p>
+              </div>
+              <p className={`flex-1 text-center ${getProfitColor(profitPerUnit)}`}>
                 {profitPerUnit.toFixed(2)}
               </p>
             </li>

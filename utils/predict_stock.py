@@ -1,6 +1,8 @@
 # predict_stock.py
 
 import pandas as pd
+import numpy as np
+import matplotlib as ml
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import StandardScaler
@@ -32,6 +34,14 @@ def train_model(data):
     print(f"Mean Squared Error: {mse}")
 
     return model, scaler, X.columns
+    from flask import Flask, request, jsonify
+   import joblib
+def predict():
+    data = request.get_json(force=True)
+    features = pd.DataFrame([data])
+    prediction = model.predict(features)
+    return jsonify({'predicted_quantity': prediction[0]})
+
 
 def predict_stock(model, scaler, new_data, training_columns):
     # Ensure new data has the same columns as the training data
@@ -64,3 +74,12 @@ if __name__ == "__main__":
 
     predicted_quantities = predict_stock(model, scaler, new_data, training_columns)
     print(f"Predicted Quantities: {predicted_quantities}")
+    const result = await response.json();
+    console.log('Prediction Result:', result);
+    setPredictionResult(result.predicted_quantity);
+  } catch (error) {
+    console.error('Error predicting inventory:', error);
+  } finally {
+    setIsPredicting(false);
+  }
+}

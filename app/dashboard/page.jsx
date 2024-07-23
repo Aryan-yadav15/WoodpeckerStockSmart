@@ -24,7 +24,28 @@ const Dashboard = () => {
   const [refreshKey, setRefreshKey] = useState(0);
 
 
-  
+  const [productId, setProductId] = useState(null);
+  useEffect(() => {
+    if (productId) {
+      console.log("i am here ")
+      const updateProductRating = async () => {
+        try {
+          const rating = await fetchRating(productId);
+          
+          // Update the product with the fetched rating
+          await db.update(Product)
+            .set({ rating: rating.reviewsCount }) // Assuming rating is an object with reviewsCount
+            .where(eq(Product.id, productId));
+
+          console.log('Product rating updated:', rating);
+        } catch (error) {
+          console.error('Error updating product rating:', error);
+        }
+      };
+
+      updateProductRating();
+    }
+  }, [productId]);
 
   useEffect(() => {
     if (email) {
@@ -108,7 +129,7 @@ const Dashboard = () => {
       const productId = uuidv4();
   
       // Insert the product
-      const [result] = await db.insert(Product)
+      await db.insert(Product)
         .values({
           id: productId,
           name: formData.get('productName'), // Retrieve product name from formData
@@ -122,17 +143,9 @@ const Dashboard = () => {
           overstock: formData.get('overstock') === 'true', // Convert overstock to boolean
           url: formData.get('url') // Save the URL for fetching the rating later
         })
-        .returning(Product.id);
+        .returning({ productId: Product.id });
   
-      // Extract productId from result
-      const insertedProductId = result[0]?.id;
-  
-      // Set the productId state
-      if (insertedProductId) {
-        setProductId(insertedProductId);
-      }
-  
-      console.log('Product added successfully:', insertedProductId);
+      console.log('Product added successfully.');
   
       // Close the modal
       handleCloseModal();

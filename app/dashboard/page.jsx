@@ -116,7 +116,7 @@ const Dashboard = () => {
         })
         .returning({ productId: Product.id }); // Return the inserted product record
 
-
+        scrapeAmazonProduct()
       console.log('Product added:', addedProduct);
       handleCloseModal();
     } catch (error) {

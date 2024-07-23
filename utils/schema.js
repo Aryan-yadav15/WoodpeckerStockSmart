@@ -30,6 +30,7 @@ export const Product = pgTable("Product", {
   overstock: boolean("overstock"),
   desc: text("desc"),
   quantity: varchar('quantity').notNull(),
+  rating:varchar('rating')
 });
 
 
